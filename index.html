@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+</head>
+
+<body>
+    <div id="app">
+        <v-app>
+            <v-main>
+                <v-container>
+
+                    <!-- vuetify stepper -->
+                    <v-stepper v-model="step">
+                        <v-stepper-header>
+                            <!-- for every item, add step -->
+                            <v-stepper-step v-for="(step, index) in items" :key="index" :step="index+1">
+                                {{step.text}}
+                            </v-stepper-step>
+                        </v-stepper-header>
+
+                        <v-stepper-items>
+                            <!-- Select a Category, on select go to next step -->
+                            <v-stepper-content step="1">
+                                <v-card>
+                                    <v-card-title>Select a Category</v-card-title>
+                                    <v-card-text>
+                                        <v-select v-model="category" :items="categories" label="Select a Category"
+                                            item-text="name" item-value="Id"  outlined @change="getSubcategories"></v-select>
+                                        </v-select>
+                                    </v-card-text>
+                                    <v-card-actions>
+                                        <v-btn color="primary" dark @click="step = 2" :disabled='category == null '>Next
+                                        </v-btn>
+                                    </v-card-actions>
+                                </v-card>
+                            </v-stepper-content>
+
+                            <v-stepper-content step="2">
+                                <v-card>
+                                    <v-card-title>Select a Subcategory</v-card-title>
+                                    <v-card-text>
+                                        <!-- v-if category is not null -->
+                                        <v-select v-model="subcategory" :items="subcategories"
+                                            label="Select a Subcategory" outlined
+                                            item-text="name"
+                                            item-value="Id">
+                                        </v-select>
+
+                                    </v-card-text>
+                                    <v-card-actions>
+                                        <v-btn color="primary" dark @click="step = 1">Back</v-btn>
+                                        <v-btn color="primary" dark @click="step = 3" :disabled='subcategory == null '>
+                                            Next</v-btn>
+                                    </v-card-actions>
+                                </v-card>
+                            </v-stepper-content>
+
+                            <!-- Fill item details -->
+
+                            <v-stepper-content step="3">
+                                <v-card>
+                                    <v-card-title>Fill item details</v-card-title>
+                                    <v-card-text>
+                                        <v-text-field v-model="itemDetails.model" label="Item make or model" outlined>
+                                        </v-text-field>
+                                        <!-- manufactured year input -->
+                                        <v-text-field v-model="itemDetails.year" label="Year of Manufacture" outlined>
+                                        </v-text-field>
+                                        <!-- date bought date-time-field -->
+                                        <v-date-picker v-model="itemDetails.dateBought" label="Date Bought" outlined>
+                                        </v-date-picker>
+                                        <v-text-field v-model="itemDetails.cost" label="Cost" outlined>
+                                        </v-text-field>
+                                    </v-card-text>
+                                    <v-card-actions>
+                                        <v-btn color="primary" dark @click="step = 2">Back</v-btn>
+                                        <v-btn color="primary" dark @click="step = 4; postItemDetails()"
+                                            :disabled='itemDetails.model == null || itemDetails.year == null || itemDetails.dateBought == null || itemDetails.cost == null '>
+                                            Next</v-btn>
+                                    </v-card-actions>
+                                </v-card>
+                            </v-stepper-content>
+                            <!-- Upload image -->
+                            <v-stepper-content step="4">
+                                <v-card>
+                                    <v-card-title>Upload image</v-card-title>
+                                    <v-card-text>
+                                        <!-- file-input -->
+                                        <v-file-input v-model="proofOfPurchase" label="Upload image" outlined>
+                                    </v-card-text>
+                                    <v-card-actions>
+                                        <v-btn color="primary" dark @click="step = 3">Back</v-btn>
+                                        <v-btn color="primary" dark @click="step = 5"
+                                            :disabled='proofOfPurchase == null '>Next</v-btn>
+                                    </v-card-actions>
+                                </v-card>
+                            </v-stepper-content>
+
+                            <!-- yes or no, is this personal -->
+                            <v-stepper-content step="5">
+                                <v-card>
+                                    <v-card-title>Is this personal?</v-card-title>
+                                    <v-card-text>
+                                        <v-radio-group v-model="personal">
+
+                                            <v-radio value="yes" label="Yes"></v-radio>
+                                            <v-radio value="no" label="No"></v-radio>
+                                        </v-radio-group>
+                                    </v-card-text>
+                                    <v-card-actions>
+
+                                        <v-btn color="primary" dark @click="step = 4">Back</v-btn>
+                                        <v-btn color="primary" dark @click="step = 6" :disabled='personal != "yes" '>
+                                            Next</v-btn>
+                                    </v-card-actions>
+                                </v-card>
+                            </v-stepper-content>
+
+                            <!-- select address from list on top, and add new address at the bottom -->
+                            <v-stepper-content step="6">
+                                <v-card>
+                                    <v-card-title>Select address</v-card-title>
+                                    <v-card-text>
+                                        <v-select v-model="selectedAddress" :items="addresses"
+                                            :item-text="item => item.street + ', ' + item.city + ', ' + item.state + ', ' + item.country"
+                                            :item-value="item => item" label="Select an address" outlined>
+                                        </v-select>
+                                    </v-card-text>
+                                    <v-card-actions>
+                                        <v-btn color="primary" dark @click="step = 5">Back</v-btn>
+                                        <v-btn color="primary" dark @click="step = 7; getCalculatedResult()"
+                                            :disabled='selectedAddress == null '>Next</v-btn>
+                                    </v-card-actions>
+                                    <!-- Add new adderss -->
+                                    <v-card-title>
+                                        Add a new address
+                                    </v-card-title>
+                                    <v-card-text>
+                                        <v-text-field v-model="newAddress.street" label="Street" outlined>
+                                        </v-text-field>
+                                        <v-text-field v-model="newAddress.city" label="City" outlined>
+                                        </v-text-field>
+                                        <v-text-field v-model="newAddress.state" label="State" outlined>
+                                        </v-text-field>
+                                        <v-text-field v-model="newAddress.country" label="Country" outlined>
+                                        </v-text-field>
+                                        <v-text-field v-model="newAddress.postalCode" label="Postal Code" outlined>
+                                        </v-text-field>
+                                    </v-card-text>
+                                    <v-card-actions>
+                                        <v-btn color="primary" dark @click="addresses.push(newAddress); newAddress = {}"
+                                            :disabled='newAddress.street == null || newAddress.city == null || newAddress.state == null || newAddress.country == null || newAddress.postalCode == null '>
+                                            Add</v-btn>
+                                        
+                                </v-card>
+                            </v-stepper-content>
+
+
+                            <v-stepper-content step="7">
+                                <v-card class="mx-auto">
+                                    <!-- Message jumbotron, congrats, you can now have your item insured. Choose the right package for you below -->
+                                    <v-card-title>
+                                        <!-- alert width full page -->
+                                        <v-alert :value="true" type="success" min-width="100%">
+                                            Congratulations! You can now have your item insured. Choose the right
+                                            package for you bellow.
+                                        </v-alert>
+                                    </v-card-title>
+                                    <v-row>
+                                        <!-- for every calculateInsurance -->
+                                        <template v-for="(period, index) in packages">
+                                            <v-col cols="12" sm="6" md="4">
+                                                <v-card class="mx-auto my-3" max-width="300" hover
+                                                    @click.stop="clickedPackage(index)" :key="index" :color="index == selectedPackage ? 'green accent-2' : 'white'" v-model="selectedPackage">
+                                                    <v-card-title>
+                                                        <div>
+                                                            <span class="headline">{{period.header}}</span>
+                                                        </div>
+                                                    </v-card-title>
+                                                    <v-card-text>
+                                                        {{ period.cost }} $ / {{period.per}}
+                                                    </v-card-text>
+                                                    <v-card-actions>
+                                                        <!-- subheading -->
+                                                        <v-subheader>{{period.subtext}}</v-subheader>
+                                                    </v-card-actions>
+                                                </v-card>
+                                            </v-col>
+                                        </template>
+                                    </v-row>
+                                    <!-- next button -->
+                                    <v-card-actions>
+                                        <v-btn color="primary" dark @click="step = 6">Back</v-btn>
+                                        <v-btn color="primary" dark :disabled='selectedPackage == null '>Next</v-btn>
+                                    </v-card-actions>
+                                    
+                                </v-card>
+
+                            </v-stepper-content>
+
+
+
+
+                </v-container>
+            </v-main>
+        </v-app>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script>
+        const BASE_URL = "https://portal.fl0.com/api/eliastest/DEV/ButterInsuranceTest/flows";
+        new Vue({
+            el: '#app',
+            vuetify: new Vuetify(),
+            mounted() {
+                this.getCategories()
+            },
+            data: {
+                step: 1,
+                category: null,
+                subcategory: null,
+                items: [{
+                    text: 'Category',
+                    disabled: false
+                },
+                {
+                    text: 'Sub-Category',
+                    disabled: false
+                },
+                {
+                    text: 'Item Details',
+                    disabled: false
+                },
+                {
+                    text: 'Proof of Purchase',
+                    disabled: false
+                },
+                {
+                    text: 'Personal?',
+                    disabled: false
+                },
+                {
+                    text: 'Address',
+                    disabled: false
+                },
+                {
+                    text: 'Complete',
+                    disabled: false
+                }
+                ],
+                categories: [],
+                itemDetails: {},
+                itemId: null,
+                proofOfPurchase: null,
+                personal: null,
+                selectedAddress: null,
+                addresses: [{
+                    country: 'Australia',
+                    city: 'Sydney',
+                    state: 'NSW',
+                    postalCode: '2000',
+                    street: '22 Market Street',
+                    id: 1
+                },
+                ],
+                cities: [
+                    {
+                        name: 'Sydney',
+                        id: 1,
+                        percentage: 1.03
+                    }
+                ],
+                newAddress: {},
+                coverage: 1.7,
+                complete: null,
+                selectedPackage: null,
+                subcategories: [],
+                packages: []
+            },
+            computed: {
+                // calculateInsurance: function () {
+                    
+                //     let initialPrice = this.itemDetails.cost;
+                //     // for every 100 above 100, add 2.5
+                //     let hundreds = Math.floor((initialPrice - 100) / 100);
+                //     // total multiplied by coverage and then cities percentage
+                //     console.log(this.selectedAddress);
+                //     if(this.selectedAddress==null){
+                //         return [];
+                //     }
+                //     let target_city = this.selectedAddress.city;
+                //     let cityPercentage = this.cities.filter(function (city) {
+                //         return city.name == target_city;
+                //     })
+                //     if (cityPercentage.length < 0) {
+                //         return [];
+                //     }
+                    
+                //     let basePrice = this.subcategory.basePrice;
+                //     console.log(basePrice, hundreds, this.coverage, cityPercentage[0].percentage);
+                //     let total = (basePrice + (hundreds * 2.5)) * this.coverage * cityPercentage[0].percentage
+                //     // return total yearly, monthly and weekly
+                //     console.log(total);
+                //     return 
+                // },
+            },
+            methods: {
+                clickedPackage: function (item) {
+                    this.selectedPackage = item
+                },
+                getCategories: function () {
+                    // get categories from api
+                    axios.get(BASE_URL + "/get-categories").then(response => {
+                        this.categories = response.data;
+                        console.log("categories", this.categories);
+                    })
+                },
+                getSubcategories: function () {
+                    // get subcategories from api
+                    axios.get(BASE_URL + "/get-subcategories?categoryId=" + this.category).then(response => {
+                        this.subcategories = response.data;
+                        console.log("Subcategories", response.data);
+                    })
+                },
+                postItemDetails: function () {
+                    // post item details to api
+                    axios.post(BASE_URL + "/create-item", {
+                        "model": this.itemDetails.model,
+                        "manufactureYear": this.itemDetails.year,
+                        "dateBought": this.itemDetails.dateBought,
+                        "cost": parseFloat(this.itemDetails.cost),
+                    }).then(response => {
+                        this.itemId = response.data.Id;
+                    })
+                },
+                getCalculatedResult: function() {
+                    axios.post(BASE_URL + "/calculate", {
+                        "itemId": this.itemId,
+                        "selectedCity": this.selectedAddress.city,
+                        "subCategoryId": this.subcategory,
+                    }).then(response => {
+                        this.packages = [
+                            {
+                                header: "Yearly",
+                                cost: response.data.yearly,
+                                per: "Year",
+                                subtext: "To be paid in 1 year installments",
+                            },
+                            {
+                                header: "Monthly",
+                                cost: response.data.monthly,
+                                per: "Month",
+                                subtext: "To be paid in 12 month installments",
+                            },
+                            {
+                                header: "Weekly",
+                                cost: response.data.weekly,
+                                per: "Week",
+                                subtext: "To be paid in 52 week installments",
+                            }
+                        ];
+                    })
+                }
+            }
+        })
+    </script>
+</body>
+
+</html>
