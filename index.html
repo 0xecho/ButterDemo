@@ -14,7 +14,76 @@
         <v-app>
             <v-main>
                 <v-container>
+                    <!-- if not logged in show login page -->
+                    <template v-if="!isLoggedIn">
+                        
+                        <template v-if="!isOnRegisterPage">
+                            <v-layout row wrap>
+                                <v-flex xs12>
+                                    <v-card>
+                                        <v-card-title>
+                                            <span class="headline">Login</span>
+                                        </v-card-title>
+                                        <v-card-text>
+                                            <v-form ref="form">
+                                                <v-text-field v-model="username" label="Username" required></v-text-field>
+                                                <v-text-field v-model="password" type="password" label="Password" required></v-text-field>
+                                            </v-form>
+                                        </v-card-text>
+                                        <v-card-actions>
+                                            <v-spacer></v-spacer>
+                                            <v-btn color="primary" @click="login">Login</v-btn>
+                                        </v-card-actions>
+                                        <v-card-actions>
+                                            <v-spacer></v-spacer>
+                                            <a @click="isOnRegisterPage = true">Register</a>
+                                        </v-card-actions>
+                                    </v-card>
+                                </v-flex>
+                            </v-layout>
+                        </template>
+                        <template v-else>
+                            <v-layout row wrap>
+                                <v-flex xs12>
+                                    <v-card>
+                                        <v-card-title>
+                                            <span class="headline">Register</span>
+                                        </v-card-title>
+                                        <v-card-text>
+                                            <v-form ref="form">
+                                                <v-text-field v-model="register_username" label="Username" required></v-text-field>
+                                                <v-text-field v-model="register_password" type="password" label="Password" required></v-text-field>
+                                            </v-form>
+                                        </v-card-text>
+                                        <v-card-actions>
+                                            <v-spacer></v-spacer>
+                                            <v-btn color="primary" @click="register">Register</v-btn>
+                                        </v-card-actions>
+                                        <!-- centered link -->
+                                        <v-card-actions>
+                                            <v-spacer></v-spacer>
+                                            <a @click="isOnRegisterPage = false">Login</a>
+                                        </v-card-actions>
 
+                                    </v-card>
+                                </v-flex>
+                            </v-layout>
+                            </template>
+                    </template>
+                    <template v-else>
+                        <!-- logged is as  -->
+                        <v-layout row wrap>
+                            <v-flex xs12>
+                                <v-card>
+                                    <v-card-title>
+                                        <span class="headline">Logged in as {{username}}</span>
+                                    </v-card-title>
+                                    <v-card-text>
+                                        <v-btn color="primary" @click="logout">Logout</v-btn>
+                                    </v-card-text>
+                                </v-card>
+                            </v-flex>
+                    
                     <!-- vuetify stepper -->
                     <v-stepper v-model="step">
                         <v-stepper-header>
@@ -73,7 +142,7 @@
                                             outlined item-text="name" item-value="name">
                                             </v-select> 
                                         <!-- manufactured year input -->
-                                        <v-text-field v-model="itemDetails.year" label="Year of Manufacture" outlined></v-text-field>
+                                        <v-text-field v-model="itemDetails.manufactureYear" label="Year of Manufacture" outlined></v-text-field>
                                         <!-- date bought input field -->
                                         <v-text-field v-model="itemDetails.dateBought" label="Date Bought" outlined></v-text-field>
                                         <!-- <v-text-field v-model="itemDetails.cost" label="Cost" outlined></v-text-field> -->
@@ -82,8 +151,8 @@
                                     </v-card-text>
                                     <v-card-actions>
                                         <v-btn color="primary" dark @click="step = 2">Back</v-btn>
-                                        <v-btn color="primary" dark @click="step = 4; postItemDetails()"
-                                            :disabled='itemDetails.model == null || itemDetails.year == null || itemDetails.dateBought == null || itemDetails.cost == null '>
+                                        <v-btn color="primary" dark @click="step = 4"
+                                            :disabled='itemDetails.model == null || itemDetails.manufactureYear == null || itemDetails.dateBought == null || itemDetails.cost == null '>
                                             Next</v-btn>
                                     </v-card-actions>
                                 </v-card>
@@ -98,7 +167,7 @@
                                     </v-card-text>
                                     <v-card-actions>
                                         <v-btn color="primary" dark @click="step = 3">Back</v-btn>
-                                        <v-btn color="primary" dark @click="step = 5; uploadImage()"
+                                        <v-btn color="primary" dark @click="step = 5"
                                             :disabled='proofOfPurchase == null'>Next</v-btn>
                                     </v-card-actions>
                                 </v-card>
@@ -138,7 +207,7 @@
                                     </v-card-text>
                                     <v-card-actions>
                                         <v-btn color="primary" dark @click="step = 5">Back</v-btn>
-                                        <v-btn color="primary" dark @click="step = 7; getCalculatedResult()"
+                                        <v-btn color="primary" dark @click="step = 7; addNewItem()"
                                             :disabled='selectedAddress == null '>Next</v-btn>
                                     </v-card-actions>
                                     <!-- Add new adderss -->
@@ -208,7 +277,8 @@
 
                             </v-stepper-content>
 
-
+                            </template>
+                        </v-stepper>
 
 
                 </v-container>
@@ -220,6 +290,7 @@
     <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
     <script>
         const BASE_URL = "https://api.fl0.com/butter/dev/butterinsurancetest/flows";
+        
         new Vue({
             el: '#app',
             vuetify: new Vuetify(),
@@ -228,6 +299,13 @@
             },
             data: {
                 step: 1,
+                isLoggedIn: false,
+                loginHeader: null,
+                username: null,
+                password: null,
+                isOnRegisterPage: false,
+                register_username: null,
+                register_password: null,
                 category: null,
                 subcategory: null,
                 items: [{
@@ -265,21 +343,8 @@
                 proofOfPurchase: null,
                 personal: null,
                 selectedAddress: null,
-                addresses: [{
-                    country: 'Australia',
-                    city: 'Sydney',
-                    state: 'NSW',
-                    postalCode: '2000',
-                    street: '22 Market Street',
-                    id: 1
-                },
-                ],
+                addresses: [],
                 cities: [
-                    {
-                        name: 'Sydney',
-                        id: 1,
-                        percentage: 1.03
-                    }
                 ],
                 newAddress: {},
                 coverage: 1.7,
@@ -317,15 +382,75 @@
                 // },
             },
             methods: {
+                login: function () {
+                    this.loginHeader = "Basic " + btoa(this.username + ":" + this.password);
+                    axios.defaults.headers.common['Authorization'] = this.loginHeader;
+                    axios.get(BASE_URL + "/get-categories").then(response => {
+                        this.isLoggedIn = true;
+                        this.password = null;
+                        axios.get(BASE_URL + "/get-addresses").then(response => {
+                            this.addresses = response.data;
+                            console.log("Addresses", this.addresses);
+                        });
+                        axios.get(BASE_URL + "/get-items").then(response => {
+                            if (response.data.length > 0) {
+                                // get default address
+                                this.itemDetails = response.data[0];
+                                this.itemId = response.data[0].Id;
+                                this.selectedAddress = this.addresses[0];
+                                this.step = 7;
+                                this.getCalculatedResult()
+                            } else {
+                                this.getCategories();
+                            }
+                        }).catch(error => {
+                            this.getCategories();
+                        });
+                    }).catch(error => {
+                        this.isLoggedIn = false;
+                        this.loginHeader = null;
+                        this.username = null;
+                        this.password = null;
+                    });
+                },
+                logout: function () {
+                    this.isLoggedIn = false;
+                    this.loginHeader = null;
+                },
+                register: function () {
+                    this.loginHeader = "Basic " + btoa(this.register_username + ":" + this.register_password);
+                    axios.defaults.headers.common['Authorization'] = this.loginHeader;
+                    axios.post(BASE_URL + "/register-user", {
+                        username: this.register_username,
+                        password: this.register_password
+                    }).then(response => {
+                        this.isLoggedIn = true;
+                        this.register_password = null;
+                        this.username = this.register_username;
+                        this.getCategories();
+                    }).catch(error => {
+                        this.isLoggedIn = false;
+                        this.loginHeader = null;
+                        this.register_password = null;
+                        this.register_username = null;
+                    });
+                },
                 clickedPackage: function (item) {
                     this.selectedPackage = item
                 },
                 getCategories: function () {
                     // get categories from api
+                    
                     axios.get(BASE_URL + "/get-categories").then(response => {
                         this.categories = response.data;
                         console.log("categories", this.categories);
-                    })
+                    }).catch(error => {
+                        // check if 401
+                        if(error.response && error.response.status == 401){
+                            this.isLoggedIn = false;
+                            this.loginHeader = null;
+                        }
+                    });
                 },
                 getSubcategories: function () {
                     // get subcategories from api
@@ -339,18 +464,54 @@
                     axios.get(BASE_URL + "/get-item-autocomplete?subCategoryId=" + this.subcategory).then(response => {
                         this.itemAutoComplete = response.data;
                         console.log("Subcategory AutoComplete", response.data);
-                    })
+                    }).catch(error => {
+                        // check if 401
+                        if(error.response && error.response.status == 401){
+                            this.isLoggedIn = false;
+                            this.loginHeader = null;
+                        }
+                    });
+                },
+                addNewItem(){
+                    // create a new item, with the selected subcategory and address
+                    axios.post(BASE_URL + "/create-item", {
+                        model: this.itemDetails.model,
+                        manufactureYear: this.itemDetails.manufactureYear,
+                        dateBought: this.itemDetails.dateBought,
+                        cost: parseFloat(this.itemDetails.cost),
+                        subCategoryId: this.subcategory,
+                        addressId: this.selectedAddress.Id
+                    }).then(response => {
+                        this.itemDetails = response.data;
+                        this.itemId = response.data.Id;
+                        console.log("GOTTEN HERE");
+                        this.getCalculatedResult()
+                        this.step = 7;
+                    }).catch(error => {
+                        // check if 401
+                        if(error.response && error.response.status == 401){
+                            this.isLoggedIn = false;
+                            this.loginHeader = null;
+                        }
+                    });
                 },
                 postItemDetails: function () {
                     // post item details to api
                     axios.post(BASE_URL + "/create-item", {
                         "model": this.itemDetails.model,
-                        "manufactureYear": this.itemDetails.year,
+                        "manufactureYear": this.itemDetails.manufactureYear,
                         "dateBought": this.itemDetails.dateBought,
                         "cost": parseFloat(this.itemDetails.cost),
+                        "subCategoryId": this.subcategory,
                     }).then(response => {
                         this.itemId = response.data.Id;
-                    })
+                    }).catch(error => {
+                        // check if 401
+                        if(error.response && error.response.status == 401){
+                            this.isLoggedIn = false;
+                            this.loginHeader = null;
+                        }
+                    });
                 },
                 uploadImage: function () {
                     // upload image to api
@@ -365,7 +526,10 @@
                     axios.request(options).then(function (response) {
                         console.log(response.data);
                     }).catch(function (error) {
-                        console.error(error);
+                        if (error.response && error.response.status == 401) {
+                            this.isLoggedIn = false;
+                            this.loginHeader = null;
+                        }
                     });
                 },
                 addNewAddress: function () {
@@ -377,38 +541,49 @@
                         "postal": this.newAddress.postalCode,
                         "street": this.newAddress.street,
                     }).then(response => {
-                        this.addresses.push(this.newAddress);
-                        this.selectedAddress = response.data;
+                        this.addresses.push(response.data);
                         this.newAddress = {};
-                    })
+                    }).catch(error => {
+                        // check if 401
+                        if(error.response && error.response.status == 401){
+                            this.isLoggedIn = false;
+                            this.loginHeader = null;
+                        }
+                    });
                 },
                 getCalculatedResult: function() {
+
                     axios.post(BASE_URL + "/calculate", {
                         "itemId": this.itemId,
-                        "selectedCity": this.selectedAddress.city,
-                        "subCategoryId": this.subcategory,
                     }).then(response => {
+                        let total = parseFloat(response.data.total);
                         this.packages = [
                             {
                                 header: "Yearly",
-                                cost: (response.data.yearly).toFixed(2),
+                                cost: (total).toFixed(2),
                                 per: "Year",
                                 subtext: "To be paid in 1 year installments",
                             },
                             {
                                 header: "Monthly",
-                                cost: (response.data.monthly).toFixed(2),
+                                cost: (total/12).toFixed(2),
                                 per: "Month",
                                 subtext: "To be paid in 12 month installments",
                             },
                             {
                                 header: "Weekly",
-                                cost: (response.data.weekly).toFixed(2),
+                                cost: (total/52).toFixed(2),
                                 per: "Week",
                                 subtext: "To be paid in 52 week installments",
                             }
                         ];
-                    })
+                    }).catch(error => {
+                        // check if 401
+                        if(error.response && error.response.status == 401){
+                            this.isLoggedIn = false;
+                            this.loginHeader = null;
+                        }
+                    });
                 }
             }
         })
