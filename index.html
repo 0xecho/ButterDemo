@@ -31,7 +31,7 @@
                                     <v-card-title>Select a Category</v-card-title>
                                     <v-card-text>
                                         <v-select v-model="category" :items="categories" label="Select a Category"
-                                            item-text="name" item-value="Id"  outlined @change="getSubcategories"></v-select>
+                                            item-text="name" item-value="Id"  outlined @change="getSubcategories">
                                         </v-select>
                                     </v-card-text>
                                     <v-card-actions>
@@ -49,7 +49,7 @@
                                         <v-select v-model="subcategory" :items="subcategories"
                                             label="Select a Subcategory" outlined
                                             item-text="name"
-                                            item-value="Id">
+                                            item-value="Id" @change="getSubcategoryAutoComplete">
                                         </v-select>
 
                                     </v-card-text>
@@ -67,16 +67,18 @@
                                 <v-card>
                                     <v-card-title>Fill item details</v-card-title>
                                     <v-card-text>
-                                        <v-text-field v-model="itemDetails.model" label="Item make or model" outlined>
-                                        </v-text-field>
+                                        <!-- <v-text-field v-model="itemDetails.model" label="Item make or model" outlined></v-text-field> -->
+                                        <!-- Select field with data from autocomplete -->
+                                        <v-select v-model="itemDetails.model" :items="itemAutoComplete" label="Item make or model"
+                                            outlined item-text="name" item-value="name">
+                                            </v-select> 
                                         <!-- manufactured year input -->
-                                        <v-text-field v-model="itemDetails.year" label="Year of Manufacture" outlined>
-                                        </v-text-field>
-                                        <!-- date bought date-time-field -->
-                                        <v-date-picker v-model="itemDetails.dateBought" label="Date Bought" outlined>
-                                        </v-date-picker>
-                                        <v-text-field v-model="itemDetails.cost" label="Cost" outlined>
-                                        </v-text-field>
+                                        <v-text-field v-model="itemDetails.year" label="Year of Manufacture" outlined></v-text-field>
+                                        <!-- date bought input field -->
+                                        <v-text-field v-model="itemDetails.dateBought" label="Date Bought" outlined></v-text-field>
+                                        <!-- <v-text-field v-model="itemDetails.cost" label="Cost" outlined></v-text-field> -->
+                                        <!-- item details cost decimal input -->
+                                        <v-text-field v-model.number="itemDetails.cost" label="Cost" outlined type="number"></v-text-field>
                                     </v-card-text>
                                     <v-card-actions>
                                         <v-btn color="primary" dark @click="step = 2">Back</v-btn>
@@ -96,8 +98,8 @@
                                     </v-card-text>
                                     <v-card-actions>
                                         <v-btn color="primary" dark @click="step = 3">Back</v-btn>
-                                        <v-btn color="primary" dark @click="step = 5"
-                                            :disabled='proofOfPurchase == null '>Next</v-btn>
+                                        <v-btn color="primary" dark @click="step = 5; uploadImage()"
+                                            :disabled='proofOfPurchase == null'>Next</v-btn>
                                     </v-card-actions>
                                 </v-card>
                             </v-stepper-content>
@@ -105,7 +107,9 @@
                             <!-- yes or no, is this personal -->
                             <v-stepper-content step="5">
                                 <v-card>
-                                    <v-card-title>Is this personal?</v-card-title>
+                                    <v-card-title>Is this for personal use?</v-card-title>
+                                    <!-- Small sub heading -->
+                                    <p class="subheading">Only items for personal use can be insured.</p>
                                     <v-card-text>
                                         <v-radio-group v-model="personal">
 
@@ -154,7 +158,7 @@
                                         </v-text-field>
                                     </v-card-text>
                                     <v-card-actions>
-                                        <v-btn color="primary" dark @click="addresses.push(newAddress); newAddress = {}"
+                                        <v-btn color="primary" dark @click="addNewAddress()"
                                             :disabled='newAddress.street == null || newAddress.city == null || newAddress.state == null || newAddress.country == null || newAddress.postalCode == null '>
                                             Add</v-btn>
                                         
@@ -184,7 +188,7 @@
                                                         </div>
                                                     </v-card-title>
                                                     <v-card-text>
-                                                        {{ period.cost }} $ / {{period.per}}
+                                                        ${{ period.cost }} / {{period.per}}
                                                     </v-card-text>
                                                     <v-card-actions>
                                                         <!-- subheading -->
@@ -215,7 +219,7 @@
     <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
     <script>
-        const BASE_URL = "https://portal.fl0.com/api/eliastest/DEV/ButterInsuranceTest/flows";
+        const BASE_URL = "https://api.fl0.com/butter/dev/butterinsurancetest/flows";
         new Vue({
             el: '#app',
             vuetify: new Vuetify(),
@@ -282,7 +286,8 @@
                 complete: null,
                 selectedPackage: null,
                 subcategories: [],
-                packages: []
+                packages: [],
+                itemAutoComplete: [],
             },
             computed: {
                 // calculateInsurance: function () {
@@ -329,6 +334,13 @@
                         console.log("Subcategories", response.data);
                     })
                 },
+                getSubcategoryAutoComplete: function () {
+                    // get subcategories autocomplete data from api
+                    axios.get(BASE_URL + "/get-item-autocomplete?subCategoryId=" + this.subcategory).then(response => {
+                        this.itemAutoComplete = response.data;
+                        console.log("Subcategory AutoComplete", response.data);
+                    })
+                },
                 postItemDetails: function () {
                     // post item details to api
                     axios.post(BASE_URL + "/create-item", {
@@ -340,6 +352,36 @@
                         this.itemId = response.data.Id;
                     })
                 },
+                uploadImage: function () {
+                    // upload image to api
+                    const options = {
+                        method: 'PUT',
+                        url: 'https://api.fl0.com/butter/dev/butterinsurancetest/flows/upload-proof-reciept',
+                        params: { itemId: this.itemId },
+                        headers: { 'Content-Type': 'image/jpeg' },
+                        data: this.proofOfPurchase
+                    };
+
+                    axios.request(options).then(function (response) {
+                        console.log(response.data);
+                    }).catch(function (error) {
+                        console.error(error);
+                    });
+                },
+                addNewAddress: function () {
+                    // add new address to api
+                    axios.post(BASE_URL + "/create-address", {
+                        "country": this.newAddress.country,
+                        "city": this.newAddress.city,
+                        "state": this.newAddress.state,
+                        "postal": this.newAddress.postalCode,
+                        "street": this.newAddress.street,
+                    }).then(response => {
+                        this.addresses.push(this.newAddress);
+                        this.selectedAddress = response.data;
+                        this.newAddress = {};
+                    })
+                },
                 getCalculatedResult: function() {
                     axios.post(BASE_URL + "/calculate", {
                         "itemId": this.itemId,
@@ -349,19 +391,19 @@
                         this.packages = [
                             {
                                 header: "Yearly",
-                                cost: response.data.yearly,
+                                cost: (response.data.yearly).toFixed(2),
                                 per: "Year",
                                 subtext: "To be paid in 1 year installments",
                             },
                             {
                                 header: "Monthly",
-                                cost: response.data.monthly,
+                                cost: (response.data.monthly).toFixed(2),
                                 per: "Month",
                                 subtext: "To be paid in 12 month installments",
                             },
                             {
                                 header: "Weekly",
-                                cost: response.data.weekly,
+                                cost: (response.data.weekly).toFixed(2),
                                 per: "Week",
                                 subtext: "To be paid in 52 week installments",
                             }
@@ -371,6 +413,12 @@
             }
         })
     </script>
+    <style>
+        .subheading {
+            font-size: 0.6rem;
+            color: #9e9e9e;
+        }
+    </style>
 </body>
 
 </html>
